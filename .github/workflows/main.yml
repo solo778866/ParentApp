@@ -22,24 +22,24 @@ jobs:
     - name: Unzip Project Files
       run: |
         unzip ParentApp.zip -d .
-        # Move files out of subfolder if the zip has one
         if [ -d "ParentApp" ]; then
           mv ParentApp/* .
           mv ParentApp/.* . 2>/dev/null || true
         fi
 
-    - name: Nuclear Repair Build Files
+    - name: Titanium Repair Build Files
       run: |
-        # 1. Target every single file that could contain the broken version
-        find . -type f \( -name "*.gradle" -o -name "*.kts" -o -name "*.properties" \) -exec sed -i 's/8\.5/8.2.2/g' {} +
+        # 1. Fix the Gradle Plugin version
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/gradle:8\.5/gradle:8.2.2/g' {} +
         
-        # 2. Force the correct Google and Maven repositories into the files
-        find . -name "build.gradle" -exec sed -i '1i buildscript { repositories { google(); mavenCentral() }; dependencies { classpath "com.android.tools.build:gradle:8.2.2" } }' {} +
+        # 2. Fix the "Blank Version" Compose errors (the double dots)
+        # This forces version 1.5.0 onto any compose library missing a version
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-tooling:[\ ]*[\$].*/ui-tooling:1.5.0"/g' {} +
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-test-manifest:[\ ]*[\$].*/ui-test-manifest:1.5.0"/g' {} +
         
-        # 3. Fix potential "libs.versions.toml" if the AI used modern version catalogs
-        if [ -f "gradle/libs.versions.toml" ]; then
-          sed -i 's/8\.5/8.2.2/g' gradle/libs.versions.toml
-        fi
+        # 3. Inject missing repositories and standard versions at the top of build.gradle
+        sed -i '1i buildscript { ext.compose_version = "1.5.0"; repositories { google(); mavenCentral() }; dependencies { classpath "com.android.tools.build:gradle:8.2.2" } }' build.gradle
+        sed -i '1i allprojects { repositories { google(); mavenCentral() } }' build.gradle
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
