@@ -27,28 +27,30 @@ jobs:
           mv ParentApp/.* . 2>/dev/null || true
         fi
 
-    - name: God-Tier Repair
+    - name: Ultimate Hybrid Repair
       run: |
-        # 1. Force the correct Gradle Plugin version everywhere except the workflow itself
-        # We search for '8.5' in any gradle or properties file and swap it for '8.2.2'
-        find . -maxdepth 4 -not -path '*/.*' -type f \( -name "*.gradle" -o -name "*.kts" -o -name "*.properties" \) -exec sed -i 's/8\.5/8.2.2/g' {} +
+        # 1. Swap the non-existent 8.5 version for 8.2.2 everywhere
+        find . -type f \( -name "*.gradle" -o -name "*.kts" -o -name "*.properties" \) -exec sed -i 's/8\.5/8.2.2/g' {} +
         
-        # 2. Fix the "Blank Version" Compose errors from the previous run
-        # This replaces the double-dot '..' error with a real version number
-        find . -maxdepth 4 -not -path '*/.*' -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-tooling\.\./ui-tooling:1.5.0/g' {} +
-        find . -maxdepth 4 -not -path '*/.*' -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-test-manifest\.\./ui-test-manifest:1.5.0/g' {} +
+        # 2. Fix the "Double Dot" Compose errors
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-tooling\.\./ui-tooling:1.5.0/g' {} +
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-test-manifest\.\./ui-test-manifest:1.5.0/g' {} +
 
-        # 3. Ensure the project knows where to find the files (Google and Maven)
-        # We inject these at the very top of the root build.gradle
+        # 3. THE KEY FIX: Resolve the repository conflict
+        # This tells settings.gradle to allow us to define repositories in the build files
+        if [ -f "settings.gradle" ]; then
+          sed -i 's/FAIL_ON_PROJECT_REPOS/PREFER_PROJECT/g' settings.gradle
+        fi
+
+        # 4. Inject clean build instructions
         sed -i '1i buildscript { repositories { google(); mavenCentral() }; dependencies { classpath "com.android.tools.build:gradle:8.2.2" } }' build.gradle
-        sed -i '2i allprojects { repositories { google(); mavenCentral() } }' build.gradle
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.5'
 
-    - name: Build APK with System Gradle
+    - name: Build APK
       run: gradle assembleDebug --stacktrace
 
     - name: Upload APK
