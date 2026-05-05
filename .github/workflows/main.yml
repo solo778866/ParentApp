@@ -27,22 +27,22 @@ jobs:
           mv ParentApp/.* . 2>/dev/null || true
         fi
 
-    - name: Ultimate Hybrid Repair
+    - name: Brute Force Recovery
       run: |
-        # 1. Swap the non-existent 8.5 version for 8.2.2 everywhere
-        find . -type f \( -name "*.gradle" -o -name "*.kts" -o -name "*.properties" \) -exec sed -i 's/8\.5/8.2.2/g' {} +
+        # 1. Fix the fake Gradle Plugin version (8.5 -> 8.2.2)
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/8\.5/8.2.2/g' {} +
         
-        # 2. Fix the "Double Dot" Compose errors
-        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-tooling\.\./ui-tooling:1.5.0/g' {} +
-        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-test-manifest\.\./ui-test-manifest:1.5.0/g' {} +
+        # 2. THE BRUTE FORCE: Find any mention of ui-tooling or ui-test-manifest 
+        # and force them to use a stable version (1.5.4), ignoring whatever variables the AI used.
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/.*ui-tooling.*/    implementation "androidx.compose.ui:ui-tooling:1.5.4"/g' {} +
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/.*ui-test-manifest.*/    debugImplementation "androidx.compose.ui:ui-test-manifest:1.5.4"/g' {} +
 
-        # 3. THE KEY FIX: Resolve the repository conflict
-        # This tells settings.gradle to allow us to define repositories in the build files
+        # 3. Resolve the "Google Repository" conflict by fixing settings.gradle
         if [ -f "settings.gradle" ]; then
           sed -i 's/FAIL_ON_PROJECT_REPOS/PREFER_PROJECT/g' settings.gradle
         fi
 
-        # 4. Inject clean build instructions
+        # 4. Inject a master buildscript at the very top of build.gradle
         sed -i '1i buildscript { repositories { google(); mavenCentral() }; dependencies { classpath "com.android.tools.build:gradle:8.2.2" } }' build.gradle
 
     - name: Setup Gradle
