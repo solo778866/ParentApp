@@ -22,18 +22,24 @@ jobs:
     - name: Unzip Project Files
       run: |
         unzip ParentApp.zip -d .
-        # Move files out of subfolder if necessary
+        # Move files out of subfolder if the zip has one
         if [ -d "ParentApp" ]; then
           mv ParentApp/* .
           mv ParentApp/.* . 2>/dev/null || true
         fi
 
-    - name: Repair Build Files
+    - name: Nuclear Repair Build Files
       run: |
-        # Fix the broken version numbers the AI generated
-        find . -name "build.gradle" -exec sed -i 's/gradle:8.5/gradle:8.2.2/g' {} +
-        # Ensure Google's repository is prioritized
-        find . -name "build.gradle" -exec sed -i '/repositories {/a \        google()' {} +
+        # 1. Target every single file that could contain the broken version
+        find . -type f \( -name "*.gradle" -o -name "*.kts" -o -name "*.properties" \) -exec sed -i 's/8\.5/8.2.2/g' {} +
+        
+        # 2. Force the correct Google and Maven repositories into the files
+        find . -name "build.gradle" -exec sed -i '1i buildscript { repositories { google(); mavenCentral() }; dependencies { classpath "com.android.tools.build:gradle:8.2.2" } }' {} +
+        
+        # 3. Fix potential "libs.versions.toml" if the AI used modern version catalogs
+        if [ -f "gradle/libs.versions.toml" ]; then
+          sed -i 's/8\.5/8.2.2/g' gradle/libs.versions.toml
+        fi
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
