@@ -27,24 +27,25 @@ jobs:
           mv ParentApp/.* . 2>/dev/null || true
         fi
 
-    - name: Hacker Identity & Build Repair
+    - name: Deep Build Recovery
       run: |
-        # 1. THE BIG FIX: Force the Parent App to use the Child App's identity so the key matches
-        find . -type f \( -name "*.gradle" -o -name "*.kts" -o -name "*.xml" -o -name "*.kt" \) -exec sed -i 's/com.example.parentapp/com.example.childapp/g' {} +
-
-        # 2. Fix the non-existent 8.5 version for 8.2.2
+        # 1. IDENTITY SWAP: Force the app to use the Child ID so the JSON key matches
+        find . -type f \( -name "*.gradle" -o -name "*.kts" -o -name "AndroidManifest.xml" -o -name "*.kt" \) -exec sed -i 's/com.example.parentapp/com.example.childapp/g' {} +
+        
+        # 2. VERSION FIX: Swap the fake 8.5 version for 8.2.2
         find . -type f \( -name "*.gradle" -o -name "*.kts" -o -name "*.properties" \) -exec sed -i 's/8\.5/8.2.2/g' {} +
         
-        # 3. Fix the "Double Dot" Compose errors
-        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-tooling\.\./ui-tooling:1.5.0/g' {} +
-        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/ui-test-manifest\.\./ui-test-manifest:1.5.0/g' {} +
+        # 3. COMPOSE REPAIR: Find any broken ui-tooling/ui-test lines and force version 1.5.0
+        # This fixes the "Double Dot" error by replacing the line with a hardcoded one
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/.*ui-tooling.*/    implementation "androidx.compose.ui:ui-tooling:1.5.0"/g' {} +
+        find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i 's/.*ui-test-manifest.*/    debugImplementation "androidx.compose.ui:ui-test-manifest:1.5.0"/g' {} +
 
-        # 4. Resolve the repository conflict
+        # 4. REPO FIX: Allow defining repositories in build files
         if [ -f "settings.gradle" ]; then
           sed -i 's/FAIL_ON_PROJECT_REPOS/PREFER_PROJECT/g' settings.gradle
         fi
 
-        # 5. Inject clean build instructions
+        # 5. MASTER INJECTION: Force clean build instructions at the top
         sed -i '1i buildscript { repositories { google(); mavenCentral() }; dependencies { classpath "com.android.tools.build:gradle:8.2.2" } }' build.gradle
 
     - name: Setup Gradle
