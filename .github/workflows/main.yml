@@ -22,31 +22,19 @@ jobs:
     - name: Unzip Project Files
       run: |
         unzip ParentApp.zip -d .
-        # If the zip had a subfolder, move everything to the root
+        # Move files out of subfolder if necessary
         if [ -d "ParentApp" ]; then
           mv ParentApp/* .
           mv ParentApp/.* . 2>/dev/null || true
         fi
 
-    - name: Force Compatible Gradle Version
+    - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.5'
 
-    - name: Make Gradle wrapper executable
-      run: |
-        # Search for gradlew if it's not in the root
-        GRADLEW_PATH=$(find . -name gradlew | head -n 1)
-        if [ -z "$GRADLEW_PATH" ]; then
-          echo "Error: gradlew not found!"
-          exit 1
-        fi
-        chmod +x "$GRADLEW_PATH"
-        # Update the path for the next step
-        echo "GRADLEW_PATH=$GRADLEW_PATH" >> $GITHUB_ENV
-
-    - name: Build APK
-      run: $GRADLEW_PATH assembleDebug
+    - name: Build APK with System Gradle
+      run: gradle assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
